@@ -5,11 +5,15 @@ import binascii
 import os
 import shutil
 import subprocess
-import thread
 import time
 import pexpect
 import src.core.setcore as core
 import impacket.tds as tds
+
+try:
+    import _thread as thread
+except ImportError:
+    import thread
 
 #from src.core.payloadgen import create_payloads
 
@@ -189,13 +193,12 @@ def deploy_hex2binary(ipaddr, port, username, password):
                     # if it isn't there yet
                     if not os.path.isfile(core.userconfigpath + "1msf.exe"):
                         # move it then
-                        subprocess.Popen("cp %s/msf.exe %s/1msf.exe" %
-                                         (core.userconfigpath, core.userconfigpath), shell=True).wait()
-                        subprocess.Popen("cp %s/1msf.exe %s/ 1> /dev/null 2> /dev/null" %
-                                         (core.userconfigpath, core.userconfigpath), shell=True).wait()
-                        subprocess.Popen("cp %s/msf2.exe %s/msf.exe 1> /dev/null 2> /dev/null" %
-                                         (core.userconfigpath, core.userconfigpath), shell=True).wait()
-            payload_filename = os.path.join(web_path + "1msf.exe")
+                        first_stage = os.path.join(core.userconfigpath, "1msf.exe")
+                        second_stage = os.path.join(core.userconfigpath, "msf2.exe")
+                        shutil.copyfile(os.path.join(core.userconfigpath, "msf.exe"), first_stage)
+                        if os.path.isfile(second_stage):
+                            shutil.copyfile(second_stage, os.path.join(core.userconfigpath, "msf.exe"))
+            payload_filename = os.path.join(web_path, "1msf.exe")
 
         with open(payload_filename, "rb") as fileopen:
             # read in the binary

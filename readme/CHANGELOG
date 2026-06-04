@@ -1,4 +1,47 @@
 ~~~~~~~~~~~~~~~~
+version 8.1.3
+~~~~~~~~~~~~~~~~
+
+* fix AES payload encryption/decryption paths to use explicit modes and Python 3 byte-safe base64 output
+* normalize Python 3 byte/text handling in payload patching, RATTE, DLL hijacking, Teensy, SMTP, and socket-send paths
+* fix Java payload generation to encode generated shellcode and AES keys instead of literal placeholder bytes
+* replace brittle shell-wrapped local file operations across web attack, harvester, Java applet, autorun, Fast-Track MSSQL, Metasploit payload, Teensy, and SET core paths
+* fix multiple path handling issues for web clone exports, applet naming defaults, RATTE staging, MSSQL payload staging, and SSL PEM staging
+* modernize Java signing and SSL certificate helper command execution to avoid shell parsing around filenames and certificate values
+* expand regression coverage for Python 3 compatibility, payload encoding, file staging, release metadata, and hardened helper behavior
+
+~~~~~~~~~~~~~~~~
+version 8.1.2
+~~~~~~~~~~~~~~~~
+
+* fix Python 3 runtime errors in the Binary2Teensy generator caused by removed Python 2 builtins and byte/string handling
+* create the QR-code reports directory before writing generated QR images
+* fix Python 3 encrypted HTTP listener AES initialization, request-header parsing, POST decoding, and URL hex decoding
+
+~~~~~~~~~~~~~~~~
+version 8.1.1
+~~~~~~~~~~~~~~~~
+
+* handle missing legacy Java shellcode injector payload artifacts with a clear error instead of a traceback
+* fix the multi-pyinject payload choice typo so existing artifacts are selected correctly
+
+~~~~~~~~~~~~~~~~
+version 8.1.0
+~~~~~~~~~~~~~~~~
+
+* add modern Python packaging metadata and editable install support
+* replace pycrypto with pycryptodome for current Python compatibility
+* update supported runtime target to Python 3.11 through 3.13
+* fix Python 3 raw_input compatibility for modules that import setcore indirectly
+* fix SSL credential harvester socketserver compatibility
+* serve harvester static files safely and block path traversal outside the web clone directory
+* fix harvester binary static-file responses and ensure harvester log directories exist
+* fix SMTP fallback authentication base64 handling on Python 3
+* improve Metasploit path detection for configured msfconsole executable paths
+* update GitHub Actions CI to current actions and supported Python versions
+* refresh README installation and development guidance
+
+~~~~~~~~~~~~~~~~
 version 8.0.3
 ~~~~~~~~~~~~~~~~
 

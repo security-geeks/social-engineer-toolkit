@@ -3,6 +3,7 @@ import re
 import sys
 import os
 import subprocess
+import shutil
 import time
 import signal
 
@@ -86,8 +87,10 @@ if "TEMPLATE=SELF" in data:
 
 # clean up cloner directory
 if clonedurl == 0:
-    subprocess.Popen("rm -rf %s/web_clone;mkdir %s/web_clone/" % (userconfigpath, userconfigpath),
-                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+    web_clone_path = os.path.join(userconfigpath, "web_clone")
+    if os.path.isdir(web_clone_path):
+        shutil.rmtree(web_clone_path)
+    os.makedirs(web_clone_path, exist_ok=True)
 
 # set a quick loop to see what the user wants
 a = 1

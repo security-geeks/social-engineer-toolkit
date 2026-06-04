@@ -4,13 +4,19 @@
 #
 import subprocess
 import os
-subprocess.Popen("rm Java_Update.jar", stderr=subprocess.PIPE,
-                 stdout=subprocess.PIPE, shell=True)
-subprocess.Popen("rm Java.class", stderr=subprocess.PIPE,
-                 stdout=subprocess.PIPE, shell=True)
-subprocess.Popen("javac Java.java", shell=True).wait()
-subprocess.Popen("jar cvf Java_Update.jar Java.class", shell=True).wait()
-subprocess.Popen("jar ufm Java_Update.jar manifest.mf", shell=True).wait()
-subprocess.Popen(
-    "cp Java_Update.jar ../../html/unsigned/unsigned.jar", shell=True)
+import shutil
+
+for artifact in ("Java_Update.jar", "Java.class"):
+    try:
+        os.remove(artifact)
+    except FileNotFoundError:
+        pass
+
+subprocess.Popen(["javac", "Java.java"]).wait()
+subprocess.Popen(["jar", "cvf", "Java_Update.jar", "Java.class"]).wait()
+subprocess.Popen(["jar", "ufm", "Java_Update.jar", "manifest.mf"]).wait()
+shutil.copyfile(
+    "Java_Update.jar",
+    os.path.join("..", "..", "html", "unsigned", "unsigned.jar"),
+)
 print("[*] Jar file exported as Java_Update.jar")

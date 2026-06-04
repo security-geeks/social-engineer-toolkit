@@ -4,6 +4,8 @@
 
 import os
 import subprocess
+import glob
+import shutil
 from time import sleep
 
 import src.core.setcore as core
@@ -16,29 +18,33 @@ autorun_path = os.path.join(core.userconfigpath, "autorun")
 
 trigger = 0
 
+
+def reset_autorun_path():
+    if os.path.isdir(autorun_path):
+        shutil.rmtree(autorun_path)
+    os.makedirs(autorun_path, exist_ok=True)
+
+
 if core.check_options("INFECTION_MEDIA=") == "ON":
     trigger = 1
-    subprocess.Popen("rm -rf {0} 1> /dev/null 2> /dev/null;"
-                     "mkdir {0} 1> /dev/null 2> /dev/null;"
-                     "cp {1} {2} 1> /dev/null 2> /dev/null".format(autorun_path,
-                                                                   os.path.join(core.userconfigpath, "payload.exe"),
-                                                                   os.path.join(autorun_path, "program.exe")),
-                     shell=True).wait()
+    reset_autorun_path()
+    shutil.copyfile(
+        os.path.join(core.userconfigpath, "payload.exe"),
+        os.path.join(autorun_path, "program.exe"),
+    )
 
 if os.path.isfile(os.path.join(core.userconfigpath, "fileformat.file")):
     trigger = 2
-    subprocess.Popen("rm -rf {0} 1> /dev/null 2> /dev/null;"
-                     "mkdir {0} 1> /dev/null 2> /dev/null;"
-                     "cp {1} {0} 1> /dev/null 2>/dev/null".format(autorun_path,
-                                                                  os.path.join(core.userconfigpath, "template.pdf")),
-                     shell=True).wait()
+    reset_autorun_path()
+    shutil.copyfile(
+        os.path.join(core.userconfigpath, "template.pdf"),
+        os.path.join(autorun_path, "template.pdf"),
+    )
 
 if os.path.isfile(os.path.join(core.userconfigpath, "dll/openthis.wab")):
-    subprocess.Popen("rm -rf {0} 1> /dev/null 2> /dev/null;"
-                     "mkdir {0} 1> /dev/null 2> /dev/null;"
-                     "cp {1} {0} 1> /dev/null 2> /dev/null".format(autorun_path,
-                                                                   os.path.join(core.userconfigpath, "dll/*")),
-                     shell=True).wait()
+    reset_autorun_path()
+    for source_path in glob.glob(os.path.join(core.userconfigpath, "dll", "*")):
+        shutil.copy2(source_path, autorun_path)
     trigger = 3
 
 if not os.path.isdir(autorun_path):

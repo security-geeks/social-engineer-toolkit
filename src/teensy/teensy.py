@@ -8,6 +8,7 @@
 import datetime
 import os
 import re
+import shutil
 import subprocess
 
 import src.core.setcore as core
@@ -146,17 +147,16 @@ if payload_counter == 1:
     metasploit_exec_path = os.path.join(core.userconfigpath, "msf.exe")
     if not apache:
 
-        subprocess.Popen("mkdir {0};"
-                         "cp {1} {2} 1> /dev/null 2> /dev/null".format(webclone_path +
-                                                                     metasploit_exec_path +
-                                                                     os.path.join(webclone_path + "x.exe")),
-                         shell=True).wait()
+        os.makedirs(webclone_path, exist_ok=True)
+        if os.path.isfile(metasploit_exec_path):
+            shutil.copyfile(metasploit_exec_path, os.path.join(webclone_path, "x.exe"))
 
         if operating_system != "windows":
             child = pexpect.spawn("python src/html/web_server.py")
 
     else:
-        subprocess.Popen("cp {0} {1}".format(metasploit_exec_path, os.path.join(webclone_path + "x.exe")), shell=True).wait()
+        if os.path.isfile(metasploit_exec_path):
+            shutil.copyfile(metasploit_exec_path, os.path.join(webclone_path, "x.exe"))
 
     if os.path.isfile(os.path.join(core.userconfigpath, "meta_config")):
         print(core.bcolors.BLUE + "\n[*] Launching MSF Listener...")

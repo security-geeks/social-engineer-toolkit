@@ -10,6 +10,7 @@ import glob
 import random
 import pexpect
 import base64
+import shutil
 
 # python 2 to 3 fixes
 try:
@@ -175,9 +176,7 @@ if filename1 == '1' or filename1 == '':
     print_status("Keeping the filename and moving on.")
 if filename1 == '2':
     filename1 = input(setprompt(["1"], "New filename"))
-    subprocess.Popen("cp %s %s/%s 1> /dev/null 2> /dev/null" %
-                     (file_format, userconfigpath, filename1), shell=True).wait()
-    file_format = ("%s/%s" % (userconfigpath, filename1))
+    file_format = shutil.copyfile(file_format, os.path.join(userconfigpath, filename1))
     print_status("Filename changed, moving on...")
 
 print ("""
@@ -419,14 +418,14 @@ def mail(to, subject, text, attach, prioflag1, prioflag2):
             input("Press {return} to view error message.")
             print(str(e))
             try:
-                mailServer.docmd("AUTH LOGIN", base64.b64encode(provideruser))
-                mailServer.docmd(base64.b64encode(pwd), "")
+                mailServer.docmd("AUTH LOGIN", smtp_auth_b64(provideruser))
+                mailServer.docmd(smtp_auth_b64(pwd), "")
             except Exception as e:
                 print(str(e))
                 try:
                     mailServer.login(provideremail, pwd)
-                    thread.start_new_thread(mailServer.sendmail(
-                        from_address, to, io.getvalue()))
+                    thread.start_new_thread(
+                        mailServer.sendmail, (from_address, to, io.getvalue()))
                 except Exception as e:
                     return_continue()
 

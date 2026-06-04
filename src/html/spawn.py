@@ -4,6 +4,7 @@ import sys
 import re
 import socket
 import subprocess
+import glob
 from src.core.setcore import *
 #python 3 compatibility
 try: import thread
@@ -13,6 +14,25 @@ import re
 import threading
 import socket
 import datetime
+
+
+def copy_matches(pattern, destination):
+    os.makedirs(destination, exist_ok=True)
+    for source_path in glob.glob(pattern):
+        destination_path = os.path.join(destination, os.path.basename(source_path))
+        if os.path.isdir(source_path):
+            shutil.copytree(source_path, destination_path, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source_path, destination_path)
+
+
+def remove_matches(pattern):
+    for path in glob.glob(pattern):
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
 
 # set current path
 definepath = os.getcwd()
@@ -35,7 +55,7 @@ track_email = check_config("TRACK_EMAIL_ADDRESSES=").lower()
 
 # grab the randomized applet name
 applet_name = check_options("APPLET_NAME=")
-if applet_name == "":
+if applet_name in (0, ""):
     applet_name = generate_random_string(6, 15) + ".jar"
     update_options("APPLET_NAME=" + applet_name)
 
@@ -54,7 +74,10 @@ if check_options("CUSTOM_EXE="):
         data = data.replace('param name="8" value="YES"', 'param name="8" value="%s"' % (goat_random))
         filewrite.write(data)
         filewrite.close()
-        subprocess.Popen("mv %s/web_clone/index.html.new %s/web_clone/index.html" % (userconfigpath, userconfigpath), shell=True).wait()
+        os.replace(
+            os.path.join(userconfigpath, "web_clone", "index.html.new"),
+            os.path.join(userconfigpath, "web_clone", "index.html"),
+        )
 
     print_status("Note that since you are using a custom payload, you will need to create your OWN listener.")
     print_status("SET has no idea what type of payload you are using, so you will need to set this up manually.")
@@ -351,8 +374,11 @@ def web_server_start():
                             break
 
     if apache == 1:
-        subprocess.Popen("cp %s/src/html/*.bin %s 1> /dev/null 2> /dev/null;cp %s/src/html/*.html %s 1> /dev/null 2> /dev/null;cp %s/web_clone/* %s 1> /dev/null 2> /dev/null;cp %s/msf.exe %s 1> /dev/null 2> /dev/null;cp %s/*.jar %s 1> /dev/null 2> /dev/null" %
-                         (definepath, apache_path, definepath, apache_path, userconfigpath, apache_path, userconfigpath, apache_path, userconfigpath, apache_path), shell=True).wait()
+        copy_matches(os.path.join(definepath, "src", "html", "*.bin"), apache_path)
+        copy_matches(os.path.join(definepath, "src", "html", "*.html"), apache_path)
+        copy_matches(os.path.join(userconfigpath, "web_clone", "*"), apache_path)
+        copy_matches(os.path.join(userconfigpath, "msf.exe"), apache_path)
+        copy_matches(os.path.join(userconfigpath, "*.jar"), apache_path)
         # if we are tracking users
         if track_email == "on":
             now = datetime.datetime.today()
@@ -650,8 +676,9 @@ except Exception as e:
             subprocess.Popen(
                 "pkill dnsspoof 1> /dev/null 2> /dev/null", shell=True).wait()
             if apache == 1:
-                subprocess.Popen("rm %s/index.html 1> /dev/null 2> /dev/null;rm %s/Signed* 1> /dev/null 2> /dev/null;rm %s/*.exe 1> /dev/null 2> /dev/null" %
-                                 (apache_path, apache_path, apache_path), shell=True).wait()
+                remove_matches(os.path.join(apache_path, "index.html"))
+                remove_matches(os.path.join(apache_path, "Signed*"))
+                remove_matches(os.path.join(apache_path, "*.exe"))
     except:
         try:
             child.close()

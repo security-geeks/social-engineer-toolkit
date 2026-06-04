@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-import subprocess
 import re
-import urllib
 import os
+import shutil
+from urllib import request
 from src.core.setcore import *
 #
 # TabNabbing Source here
@@ -44,8 +44,10 @@ for line in fileopen:
             URL = "http://" + URL
 
 # move cloned site to index2.html
-subprocess.Popen("mv %s/web_clone/index.html %s/web_clone/index2.html" %
-                 (userconfigpath, userconfigpath), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+os.replace(
+    os.path.join(userconfigpath, "web_clone", "index.html"),
+    os.path.join(userconfigpath, "web_clone", "index2.html"),
+)
 
 # grab the source and write it out to the cloned directory
 fileopen = open("src/webattack/tabnabbing/source.js", "r")
@@ -62,7 +64,7 @@ filewrite.close()
 
 if attack_vector == "tabnabbing":
     # grab favicon
-    favicon = urllib.request.urlopen("%s/favicon.ico" % (URL))
+    favicon = request.urlopen("%s/favicon.ico" % (URL))
     output = open(userconfigpath + '/web_clone/favicon.ico', 'wb')
     output.write(favicon.read())
     output.close()

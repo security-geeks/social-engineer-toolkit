@@ -1,67 +1,78 @@
 # The Social-Engineer Toolkit (SET)
-* Copyright :copyright: 2020
-* Written by: David Kennedy (ReL1K) @HackingDave 
-* Company: [TrustedSec](https://www.trustedsec.com)
 
-<br/>
+The Social-Engineer Toolkit is an open-source penetration testing framework for authorized social-engineering assessments. SET provides guided attack vectors for security teams that need to test user awareness, validate controls, and run consent-based red-team exercises.
 
-## Description
-The Social-Engineer Toolkit is an open-source penetration testing framework designed for social engineering. SET has a number of custom attack vectors that allow you to make a believable attack quickly. SET is a product of TrustedSec, LLC – an information security consulting firm located in Cleveland, Ohio.
+SET is a TrustedSec project written by David Kennedy (ReL1K) / @HackingDave.
 
-DISCLAIMER: This is *only* for testing purposes and can only be used where strict consent has been given. Do not use this for illegal purposes, period.
-Please read the LICENSE under readme/LICENSE for the licensing of SET. 
+## Responsible Use
 
-#### Supported platforms:
-* Linux
-* Mac OS X (experimental)
+SET is only for authorized testing where explicit permission and scope have been established. Do not use SET against systems, accounts, networks, or people without consent. Review the license in [readme/LICENSE](readme/LICENSE) before using or distributing SET.
 
-# Installation
+## Supported Platforms
 
-## Install via requirements.txt
+- Linux
+- macOS, experimental
+- Windows through WSL/WSL2 Kali or another supported Linux environment
 
-```bash
-pip3 install -r requirements.txt
-python3 setup.py 
-```
-
-## Install SET
-=======
-#### Mac OS X
-You will need to use a virtual environment for the Python install if you are using an M2 Macbook with the following instructions in your CLI within the social-engineer-toolkit directory. 
-```bash
-    # to install dependencies, run the following:
-    python3 -m venv path/to/venv
-    source path/to/venv/bin/activate
-    python3 -m pip install -r requirements.txt
-
-    # to install SET
-    sudo python3 setup.py 
-```
-
-<br/>
+SET 8.1.3 targets Python 3.11 through Python 3.13.
 
 ## Installation
-#### Windows 10 WSL/WSL2 Kali Linux
+
+### Kali Linux / WSL
+
 ```bash
+sudo apt update
 sudo apt install set -y
 ```
-Kali Linux on Windows 10 is a minimal installation so it doesn't have any tools installed.
-You can easily install Social Engineer Toolkit on WSL/WSL2 without needing pip using the above command.
 
-#### Linux
+### From Source
+
 ```bash
 git clone https://github.com/trustedsec/social-engineer-toolkit/ setoolkit/
 cd setoolkit
-pip3 install -r requirements.txt
-python setup.py
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
 ```
-<br/>
 
-## SET Tutorial
-For a full document on how to use SET, [visit the SET user manual](https://github.com/trustedsec/social-engineer-toolkit/raw/master/readme/User_Manual.pdf).
+For the legacy system-wide layout, run the installer with elevated privileges:
 
-<br/>
+```bash
+sudo python3 setup.py
+```
 
-## Bugs and enhancements
-For bug reports or enhancements, please open an [issue](https://github.com/trustedsec/social-engineer-toolkit/issues) here.
-<br/>
+The legacy installer copies SET to `/usr/local/share/setoolkit`, writes `/etc/setoolkit/set.config`, and creates `/usr/local/bin/setoolkit`.
+
+## Usage
+
+Launch the interactive console:
+
+```bash
+sudo setoolkit
+```
+
+From a source checkout, you can also run:
+
+```bash
+sudo ./setoolkit
+```
+
+The full user manual is available at [readme/User_Manual.pdf](https://github.com/trustedsec/social-engineer-toolkit/raw/master/readme/User_Manual.pdf).
+
+## Development
+
+```bash
+python -m pip install -e .
+python -m pip install pytest
+python -m compileall -q .
+pytest -q
+```
+
+## Security Reports
+
+Please report vulnerabilities through the process in [SECURITY.md](SECURITY.md). Do not open public issues for exploitable vulnerabilities.
+
+## Bugs and Enhancements
+
+For non-sensitive bug reports or enhancement requests, open an issue at https://github.com/trustedsec/social-engineer-toolkit/issues with SET version, platform, Python version, and reproduction steps.

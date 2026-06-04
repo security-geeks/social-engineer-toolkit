@@ -110,7 +110,7 @@ if firstprompt == "2":
         try:
             core.print_info("Importing the certificate into SET...")
 
-            subprocess.Popen("keytool -import -alias MyCert -file {}".format(cert_path), shell=True).wait()
+            subprocess.Popen(["keytool", "-import", "-alias", "MyCert", "-file", cert_path]).wait()
             # trigger that we have our certificate already and bypass the
             # request process below
             use_flag = 1
@@ -145,21 +145,25 @@ if firstprompt == "2":
             # grab city
             answer5 = input(core.setprompt("0", "City"))
             # generate the request crl
-            subprocess.Popen('keytool '
-                             '-genkey '
-                             '-alias MyCert '
-                             '-keyalg RSA '
-                             '-keysize 2048 '
-                             '-dname "CN={a1},O={a2},C={a3},ST={a4},L={a5}"'.format(a1=answer1,
-                                                                                    a2=answer2,
-                                                                                    a3=answer3,
-                                                                                    a4=answer4,
-                                                                                    a5=answer5),
-                             shell=True).wait()
+            subprocess.Popen([
+                "keytool",
+                "-genkey",
+                "-alias", "MyCert",
+                "-keyalg", "RSA",
+                "-keysize", "2048",
+                "-dname", "CN={a1},O={a2},C={a3},ST={a4},L={a5}".format(
+                    a1=answer1,
+                    a2=answer2,
+                    a3=answer3,
+                    a4=answer4,
+                    a5=answer5,
+                ),
+            ]).wait()
 
             core.print_info("Exporting the cert request to text file...")
             # generate the request and export to certreq
-            subprocess.Popen("keytool -certreq -alias MyCert > {}".format(os.path.join(definepath, "certreq.txt")), shell=True).wait()
+            with open(os.path.join(definepath, "certreq.txt"), "w") as certreq:
+                subprocess.Popen(["keytool", "-certreq", "-alias", "MyCert"], stdout=certreq).wait()
             core.print_status("Export successful. Exported certificate under the SET root under certreq.txt")
             core.print_warning("You will now need to pay for a code signing certificate through Verisign/Thawte/GoDaddy/etc.")
             core.print_warning("Be sure to purchase a code signing certificate, not a normal website SSL certificate.")
@@ -178,13 +182,18 @@ if firstprompt == "2":
                         break
 
             # import the certificate
-            subprocess.Popen("keytool -import -alias MyCert -file {0}".format(cert_path), shell=True).wait()
+            subprocess.Popen(["keytool", "-import", "-alias", "MyCert", "-file", cert_path]).wait()
 
     # if our certificate is in the data store
     if os.path.isfile(cert_path):
         # sign the applet with the imported certificate
-        subprocess.Popen("jarsigner -signedjar Signed_Update.jar {0} MyCert".format(os.path.join(definepath, "src/html/unsigned/unsigned.jar")), shell=True).wait()
+        subprocess.Popen([
+            "jarsigner",
+            "-signedjar", "Signed_Update.jar",
+            os.path.join(definepath, "src/html/unsigned/unsigned.jar"),
+            "MyCert",
+        ]).wait()
         # move it into our html directory
-        subprocess.Popen("mv Signed_Update.jar {0}".format(os.path.join(core.userconfigpath, "Signed_Update.jar.orig")), shell=True).wait()
+        shutil.move("Signed_Update.jar", os.path.join(core.userconfigpath, "Signed_Update.jar.orig"))
         # move back to original directory
         core.print_status("Java Applet is now signed and will be imported into the java applet website attack from now on...")

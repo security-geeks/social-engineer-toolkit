@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
-import html
 import os
 import re
+import glob
 
-try:
-    from cgi import escape
-except ImportError:
-    from html import escape
+from html import escape
 
 # need for python2 -> 3
 try:
@@ -22,10 +19,11 @@ import socket
 # needed for python2 -> 3
 try:
     from SocketServer import *
-    import SocketServer
+    import SocketServer as ss
 
 except ImportError:
     from socketserver import *
+    import socketserver as ss
 
 import threading
 import datetime
@@ -41,6 +39,13 @@ from set_config import WEBATTACK_EMAIL as webattack_email
 from set_config import TRACK_EMAIL_ADDRESSES as track_email
 from set_config import HARVESTER_LOG as logpath
 sys.path.append(definepath)
+
+
+def copy_pem_files(source_pattern, destination):
+    os.makedirs(destination, exist_ok=True)
+    for pem_path in glob.glob(source_pattern):
+        shutil.copy2(pem_path, destination)
+
 
 if track_email == True:
     print_status("You have selected to track user accounts, Apache will automatically be turned on to handle tracking of users.")
@@ -58,8 +63,11 @@ me = mod_name()
 sys.path.append(definepath)
 
 
-if not os.path.isfile("%s/src/logs/harvester.log" % (os.getcwd())):
-    filewrite = open("%s/src/logs/harvester.log" % (os.getcwd()), "w")
+log_dir = os.path.join(os.getcwd(), "src/logs")
+os.makedirs(log_dir, exist_ok=True)
+harvester_log = os.path.join(log_dir, "harvester.log")
+if not os.path.isfile(harvester_log):
+    filewrite = open(harvester_log, "w")
     filewrite.write("")
     filewrite.close()
 
@@ -170,11 +178,10 @@ for line in fileopen:
                 sys.path.append("src/core/ssl")
                 # import our ssl module
                 import setssl
-                subprocess.Popen("cp %s/CA/*.pem %s" % (userconfigpath, userconfigpath),
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+                copy_pem_files(os.path.join(userconfigpath, "CA", "*.pem"), userconfigpath)
                 # remove old junk we dont need anymore
-                subprocess.Popen("rm -rf %s/CA;cp *.pem %s" % (userconfigpath, userconfigpath),
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+                shutil.rmtree(os.path.join(userconfigpath, "CA"), ignore_errors=True)
+                copy_pem_files("*.pem", userconfigpath)
 
         # if user wants to specify his/her own PEM certificate
         if self_signed == "false":
@@ -188,8 +195,7 @@ for line in fileopen:
                         print("\nUnable to find PEM file, check location and config again.")
                         exit_set()
                     if os.path.isfile(pem_client):
-                        subprocess.Popen("cp %s %s/newcert.pem" % (pem_client, userconfigpath),
-                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+                        shutil.copyfile(pem_client, os.path.join(userconfigpath, "newcert.pem"))
                 match2 = re.search("PEM_SERVER=", line)
                 if match2:
                     pem_server = line.replace("PEM_SERVER=", "")
@@ -197,8 +203,7 @@ for line in fileopen:
                         print("\nUnable to find PEM file, check location and config again.")
                         exit_set()
                     if os.path.isfile(pem_server):
-                        subprocess.Popen("cp %s %s/newreq.pem" % (pem_server, userconfigpath),
-                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+                        shutil.copyfile(pem_server, os.path.join(userconfigpath, "newreq.pem"))
 
 # url decode for postbacks
 def htc(m):
@@ -207,7 +212,7 @@ def htc(m):
 # url decode
 def urldecode(url):
     url = url.decode('utf-8')
-    rex = re.compile('%([0-9a-hA-H][0-9a-hA-H])', re.M)
+    rex = re.compile('%([0-9a-fA-F][0-9a-fA-F])', re.M)
     return rex.sub(htc, url)
 
 # here is where we specify how many people actually visited versus fell for it
@@ -246,7 +251,7 @@ class SETHandler(BaseHTTPRequestHandler):
             pass
 
         webroot = os.path.abspath(os.path.join(userconfigpath, 'web_clone'))
-        requested_file = os.path.abspath(os.path.join(webroot, os.path.relpath(self.path, '/')))
+        requested_file = safe_join_webroot(webroot, self.path)
         # try block setup to catch transmission errors
         try:
 
@@ -254,10 +259,8 @@ class SETHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content_type', 'text/html')
                 self.end_headers()
-                fileopen = open(userconfigpath + "web_clone/index.html", "r")
-                for line in fileopen:
-                    line = line.encode('utf-8')
-                    self.wfile.write(line)
+                with open(userconfigpath + "web_clone/index.html", "rb") as fileopen:
+                    self.wfile.write(fileopen.read())
                 # write out that we had a visit
                 visits.write("hit\n")
                 # visits.close()
@@ -267,22 +270,18 @@ class SETHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content_type', 'text/html')
                 self.end_headers()
-                fileopen = open(userconfigpath + "web_clone/index2.html", "r")
-                for line in fileopen:
-                    line = line.encode('utf-8')
-                    self.wfile.write(line)
+                with open(userconfigpath + "web_clone/index2.html", "rb") as fileopen:
+                    self.wfile.write(fileopen.read())
                 # write out that we had a visit
                 visits.write("hit\n")
                 # visits.close()
 
             else:
-                if os.path.isfile(requested_file):
+                if requested_file and os.path.isfile(requested_file):
                     self.send_response(200)
                     self.end_headers()
-                    fileopen = open(requested_file, "rb")
-                    for line in fileopen:
-                        line = line.encode('utf-8')
-                        self.wfile.write(line)
+                    with open(requested_file, "rb") as fileopen:
+                        self.wfile.write(fileopen.read())
 
                 else:
                     self.send_response(404)
@@ -309,11 +308,14 @@ class SETHandler(BaseHTTPRequestHandler):
         # put the params into site.template for later user
         filewrite = open(userconfigpath + "site.template", "a")
         filewrite.write("\n")
-        if not os.path.isfile("%s/src/logs/harvester.log" % (os.getcwd())):
-            filewrite3 = open("%s/src/logs/harvester.log" % os.getcwd(), "w")
+        log_dir = os.path.join(os.getcwd(), "src/logs")
+        os.makedirs(log_dir, exist_ok=True)
+        harvester_log = os.path.join(log_dir, "harvester.log")
+        if not os.path.isfile(harvester_log):
+            filewrite3 = open(harvester_log, "w")
             filewrite3.write("")
             filewrite3.close()
-        filewrite2 = open("%s/src/logs/harvester.log" % os.getcwd(), "a")
+        filewrite2 = open(harvester_log, "a")
         filewrite.write("\n\n")
         print(bcolors.RED + "[*] WE GOT A HIT! Printing the output:\r" + bcolors.GREEN)
         for line in url:
@@ -553,7 +555,7 @@ def run():
 class SecureHTTPServer(HTTPServer):
 
     def __init__(self, server_address, HandlerClass):
-        SocketServer.BaseServer.__init__(self, server_address, HandlerClass)
+        ss.BaseServer.__init__(self, server_address, HandlerClass)
         # SSLv2 and SSLv3 supported
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         # pem files defined before
@@ -614,7 +616,10 @@ if ssl_flag == 'true':
     if not os.path.isfile(userconfigpath + "newcert.pem"):
         print("PEM files not detected. SSL will not work properly.")
     # copy over our PEM files
-    subprocess.Popen("cp %s/*.pem %s/web_clone/" % (userconfigpath, userconfigpath), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+    copy_pem_files(
+        os.path.join(userconfigpath, "*.pem"),
+        os.path.join(userconfigpath, "web_clone"),
+    )
     # copy patched socket over to web clone
     definepath = os.getcwd()
     # we need to move a modified version of socket to handle SSL

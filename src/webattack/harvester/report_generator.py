@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import re
-import subprocess
 import os
 import datetime
+import shutil
 from src.core.setcore import *
 
 # make sure the reports directory is created
@@ -122,5 +122,9 @@ try:
 except:
     pass
 
-subprocess.Popen("cp -rf %s/src/core/reports/files %sreports/" % (definepath, userconfigpath), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+shutil.copytree(
+    os.path.join(definepath, "src", "core", "reports", "files"),
+    os.path.join(userconfigpath, "reports", "files"),
+    dirs_exist_ok=True,
+)
 print(bcolors.BLUE + "[*] File in XML format exported to %sreports/%s.xml for your reading pleasure..." % (userconfigpath, now) + bcolors.ENDC)

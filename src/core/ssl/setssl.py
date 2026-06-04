@@ -5,16 +5,21 @@
 # Used if you want to create self signed
 
 from src.core.setcore import *
+import glob
 import subprocess
 import os
+import shutil
 definepath = os.getcwd()
 os.chdir(userconfigpath)
 # create the directories for us
-subprocess.Popen("mkdir CA;cd CA;mkdir newcerts private", shell=True).wait()
+os.makedirs(os.path.join("CA", "newcerts"), exist_ok=True)
+os.makedirs(os.path.join("CA", "private"), exist_ok=True)
 # move into CA directory
 os.chdir("CA/")
 # create necessary files
-subprocess.Popen("echo '01' > serial;touch index.txt", shell=True).wait()
+with open("serial", "w") as filewrite:
+    filewrite.write("01\n")
+open("index.txt", "a").close()
 filewrite = open("openssl.cnf", "w")
 filewrite.write("""#
 # OpenSSL configuration file.
@@ -58,8 +63,17 @@ subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid:always,issuer:always""")
 # close editing of the file
 filewrite.close()
-subprocess.Popen(
-    "openssl req -new -x509 -extensions v3_ca -keyout private/cakey.pem -out newcert.pem -days 3650 -config ./openssl.cnf", shell=True).wait()
-subprocess.Popen(
-    "cp private/cakey.pem newreq.pem;cp *.pem ../", shell=True).wait()
+subprocess.Popen([
+    "openssl", "req",
+    "-new",
+    "-x509",
+    "-extensions", "v3_ca",
+    "-keyout", "private/cakey.pem",
+    "-out", "newcert.pem",
+    "-days", "3650",
+    "-config", "./openssl.cnf",
+]).wait()
+shutil.copyfile(os.path.join("private", "cakey.pem"), "newreq.pem")
+for pem_path in glob.glob("*.pem"):
+    shutil.copy2(pem_path, "..")
 os.chdir(definepath)

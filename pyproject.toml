@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "social-engineer-toolkit"
+version = "8.1.3"
+description = "An open-source penetration testing framework for authorized social-engineering assessments."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { file = "readme/LICENSE" }
+authors = [
+    { name = "David Kennedy" },
+]
+keywords = ["security", "penetration-testing", "social-engineering", "red-team"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+]
+dependencies = [
+    "pexpect",
+    "pycryptodome",
+    "requests",
+    "pyOpenSSL",
+    "pefile",
+    "impacket",
+    "qrcode",
+    "pillow",
+    "pymssql<3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/trustedsec/social-engineer-toolkit"
+Issues = "https://github.com/trustedsec/social-engineer-toolkit/issues"
+
+[tool.setuptools]
+include-package-data = true
+script-files = ["setoolkit", "seautomate", "seproxy", "seupdate"]
+
+[tool.setuptools.packages.find]
+include = ["src*"]

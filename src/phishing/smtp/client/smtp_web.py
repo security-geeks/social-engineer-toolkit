@@ -458,10 +458,9 @@ def mail(to, subject, prioflag1, prioflag2, text):
             mailServer.sendmail(from_address, to, io.getvalue())
     except:
         # try logging in with base64 encoding here
-        import base64
         try:
-            mailServer.docmd("AUTH LOGIN", base64.b64encode(provideruser.encode()))
-            mailServer.docmd(base64.b64encode(pwd.encode()), "")
+            mailServer.docmd("AUTH LOGIN", smtp_auth_b64(provideruser))
+            mailServer.docmd(smtp_auth_b64(pwd), "")
 
         # except exceptions and print incorrect password
         except Exception as e:
@@ -479,7 +478,7 @@ if option1 == '1':
     # if we specify to track users, this will replace the INSERTUSERHERE with
     # the "TO" field.
     if track_email.lower() == "on":
-        body_new = body_new.replace("INSERTUSERHERE", str(base64.b64encode(to.encode())))
+        body_new = body_new.replace("INSERTUSERHERE", smtp_auth_b64(to))
     # call the function to send email
     try:
         mail(to, subject, prioflag1, prioflag2, body_new)
@@ -505,7 +504,7 @@ if option1 == '2':
         # if we specify to track users, this will replace the INSERTUSERHERE
         # with the "TO" field.
         if track_email.lower() == "on":
-            body_new = body_new.replace("INSERTUSERHERE", str(base64.b64encode(to.encode())))
+            body_new = body_new.replace("INSERTUSERHERE", smtp_auth_b64(to))
         # send the actual email
         time_delay = check_config("TIME_DELAY_EMAIL=").lower()
         time.sleep(int(time_delay))
